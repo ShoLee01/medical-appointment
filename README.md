@@ -19,7 +19,7 @@ Este proyecto implementa una API RESTful para gestión de citas médicas utiliza
 ### 1. Crear Cita Médica - \`POST /appointments\`
 
 **Request:**
-\`\`\`bash
+```bash
 curl -X POST 'https://xbwuay4759.execute-api.us-east-1.amazonaws.com/appointments' \\
 -H 'Content-Type: application/json' \\
 -d '{
@@ -27,27 +27,27 @@ curl -X POST 'https://xbwuay4759.execute-api.us-east-1.amazonaws.com/appointment
   "scheduleId": 1,
   "countryISO": "PE"
 }'
-\`\`\`
+```
 
 **Response (201 Created):**
-\`\`\`json
+```json
 {
   "id": "8748b543-79c3-42b3-9356-0de68442349e",
   "status": "pending",
   "scheduleId": 1,
   "createdAt": "2025-05-03T01:14:26.415Z"
 }
-\`\`\`
+```
 
 ### 2. Listar Citas por Asegurado - \`GET /appointments\`
 
 **Request:**
-\`\`\`bash
+```bash
 curl -X GET 'https://xbwuay4759.execute-api.us-east-1.amazonaws.com/appointments?insuredId=00026'
-\`\`\`
+```
 
 **Response (200 OK):**
-\`\`\`json
+```json
 [
   {
     "id": "8748b543-79c3-42b3-9356-0de68442349e",
@@ -62,30 +62,13 @@ curl -X GET 'https://xbwuay4759.execute-api.us-east-1.amazonaws.com/appointments
     "createdAt": "2025-05-03T01:17:32.260Z"
   }
 ]
-\`\`\`
-
----
-
-## Diagrama de Arquitectura
-
-\`\`\`mermaid
-graph TD
-    A[API Client] --> B[API Gateway]
-    B --> C[AWS Lambda]
-    C --> D[NestJS Application]
-    D --> E[Appointment Module]
-    E --> F[Domain Layer]
-    E --> G[Application Layer]
-    E --> H[Infrastructure Layer]
-    H --> I[DynamoDB Repository]
-    H --> J[SNS Integration]
-\`\`\`
+```
 
 ---
 
 ## Estructura del Proyecto
 
-\`\`\`
+```
 src/
 ├── core/
 │   ├── domain/
@@ -117,7 +100,7 @@ src/
 │   └── middleware/
 ├── tests/
 └── main.ts
-\`\`\`
+```
 
 ---
 
@@ -133,41 +116,41 @@ src/
 ## Configuración Inicial
 
 1. Clonar repositorio:
-\`\`\`bash
-git clone https://github.com/tu-usuario/medical-appointments-api.git
+```bash
+git clone https://github.com/ShoLee01/medical-appointment.git
 cd medical-appointments-api
-\`\`\`
+```
 
 2. Instalar dependencias:
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 3. Configurar variables de entorno (crear \`.env\`):
-\`\`\`env
+```env
 AWS_REGION=us-east-1
 DYNAMODB_TABLE=medical-appointments
 STAGE=dev
-\`\`\`
+```
 
 ---
 
 ## Desarrollo Local
 
 Iniciar servidor con DynamoDB local:
-\`\`\`bash
+```bash
 npm run start:dev
-\`\`\`
+```
 
 Ejecutar pruebas unitarias:
-\`\`\`bash
+```bash
 npm test
-\`\`\`
+```
 
 Generar documentación Swagger:
-\`\`\`bash
+```bash
 npm run swagger
-\`\`\`
+```
 Acceder a: \`http://localhost:3000/api/docs\`
 
 ---
@@ -175,19 +158,19 @@ Acceder a: \`http://localhost:3000/api/docs\`
 ## Despliegue en AWS
 
 1. Configurar credenciales AWS:
-\`\`\`bash
+```bash
 aws configure
-\`\`\`
+```
 
 2. Empaquetar aplicación:
-\`\`\`bash
+```bash
 npm run build
-\`\`\`
+```
 
 3. Desplegar con Serverless Framework:
-\`\`\`bash
+```bash
 npx serverless deploy --stage prod --region us-east-1
-\`\`\`
+```
 
 ---
 
