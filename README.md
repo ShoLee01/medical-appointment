@@ -1,98 +1,243 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Medical Appointment API - NestJS
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este proyecto implementa una API RESTful para gestión de citas médicas utilizando **NestJS**, combinando las mejores prácticas de desarrollo con escalabilidad en la nube. La arquitectura integra principios de _Clean Architecture_ y aprovecha el ecosistema TypeScript para un mantenimiento eficiente.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+![NestJS Architecture](https://nestjs.com/img/logo-small.svg)
 
-## Description
+## Características Clave
+- Framework: **NestJS 9+**
+- Base de Datos: **AWS DynamoDB** (NoSQL)
+- Despliegue: **AWS Lambda** + **API Gateway**
+- Estructura: Módulos independientes con responsabilidades claras
+- Validación: **Class-Validator** y **Pipes** integrados
+- Documentación: Generación automática con **Swagger**
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Endpoints Principales
 
-```bash
-$ npm install
-```
+### 1. Crear Cita Médica - \`POST /appointments\`
 
-## Compile and run the project
+**Request:**
+\`\`\`bash
+curl -X POST 'https://xbwuay4759.execute-api.us-east-1.amazonaws.com/appointments' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "insuredId": "00026",
+  "scheduleId": 1,
+  "countryISO": "PE"
+}'
+\`\`\`
 
-```bash
-# development
-$ npm run start
+**Response (201 Created):**
+\`\`\`json
+{
+  "id": "8748b543-79c3-42b3-9356-0de68442349e",
+  "status": "pending",
+  "scheduleId": 1,
+  "createdAt": "2025-05-03T01:14:26.415Z"
+}
+\`\`\`
 
-# watch mode
-$ npm run start:dev
+### 2. Listar Citas por Asegurado - \`GET /appointments\`
 
-# production mode
-$ npm run start:prod
-```
+**Request:**
+\`\`\`bash
+curl -X GET 'https://xbwuay4759.execute-api.us-east-1.amazonaws.com/appointments?insuredId=00026'
+\`\`\`
 
-## Run tests
+**Response (200 OK):**
+\`\`\`json
+[
+  {
+    "id": "8748b543-79c3-42b3-9356-0de68442349e",
+    "status": "pending",
+    "scheduleId": 1,
+    "createdAt": "2025-05-03T01:14:26.415Z"
+  },
+  {
+    "id": "f9701feb-d111-49a6-bcd0-54ac7c6c0f86",
+    "status": "completed",
+    "scheduleId": 1,
+    "createdAt": "2025-05-03T01:17:32.260Z"
+  }
+]
+\`\`\`
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+## Diagrama de Arquitectura
 
-# test coverage
-$ npm run test:cov
-```
+\`\`\`mermaid
+graph TD
+    A[API Client] --> B[API Gateway]
+    B --> C[AWS Lambda]
+    C --> D[NestJS Application]
+    D --> E[Appointment Module]
+    E --> F[Domain Layer]
+    E --> G[Application Layer]
+    E --> H[Infrastructure Layer]
+    H --> I[DynamoDB Repository]
+    H --> J[SNS Integration]
+\`\`\`
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Estructura del Proyecto
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+\`\`\`
+src/
+├── core/
+│   ├── domain/
+│   │   ├── appointment.entity.ts
+│   │   └── value-objects/
+│   ├── ports/
+│   │   ├── appointment.repository.ts
+│   │   └── event.publisher.ts
+│   └── exceptions/
+├── application/
+│   ├── dto/
+│   ├── services/
+│   │   ├── appointment.service.ts
+│   │   └── scheduler/
+│   └── use-cases/
+├── infrastructure/
+│   ├── controllers/
+│   │   ├── appointment.controller.ts
+│   │   └── health.controller.ts
+│   ├── repositories/
+│   │   ├── dynamodb/
+│   │   └── mysql/
+│   ├── messaging/
+│   │   ├── aws/
+│   │   └── event-bridge/
+│   └── config/
+├── shared/
+│   ├── utils/
+│   └── middleware/
+├── tests/
+└── main.ts
+\`\`\`
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Requisitos Previos
 
-## Resources
+- Node.js 16+
+- AWS CLI configurado
+- NestJS CLI (\`npm i -g @nestjs/cli\`)
+- Docker (para DynamoDB local)
 
-Check out a few resources that may come in handy when working with NestJS:
+---
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Configuración Inicial
 
-## Support
+1. Clonar repositorio:
+\`\`\`bash
+git clone https://github.com/tu-usuario/medical-appointments-api.git
+cd medical-appointments-api
+\`\`\`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+2. Instalar dependencias:
+\`\`\`bash
+npm install
+\`\`\`
 
-## Stay in touch
+3. Configurar variables de entorno (crear \`.env\`):
+\`\`\`env
+AWS_REGION=us-east-1
+DYNAMODB_TABLE=medical-appointments
+STAGE=dev
+\`\`\`
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## Desarrollo Local
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Iniciar servidor con DynamoDB local:
+\`\`\`bash
+npm run start:dev
+\`\`\`
+
+Ejecutar pruebas unitarias:
+\`\`\`bash
+npm test
+\`\`\`
+
+Generar documentación Swagger:
+\`\`\`bash
+npm run swagger
+\`\`\`
+Acceder a: \`http://localhost:3000/api/docs\`
+
+---
+
+## Despliegue en AWS
+
+1. Configurar credenciales AWS:
+\`\`\`bash
+aws configure
+\`\`\`
+
+2. Empaquetar aplicación:
+\`\`\`bash
+npm run build
+\`\`\`
+
+3. Desplegar con Serverless Framework:
+\`\`\`bash
+npx serverless deploy --stage prod --region us-east-1
+\`\`\`
+
+---
+
+## Flujo de Trabajo de Citas
+
+1. Validación de entrada con \`CreateAppointmentDto\`
+2. Verificación de disponibilidad en agenda
+3. Persistencia en DynamoDB
+4. Publicación de evento a SNS
+5. Respuesta estructurada al cliente
+
+---
+
+## Políticas de Calidad
+
+- TypeScript estricto (\`strict: true\`)
+- Linting con ESLint/Prettier
+- Tests unitarios con Jest
+- Validación automática de DTOs
+- Seguridad por defecto (CORS, rate limiting)
+
+---
+
+## Monitorización
+
+Integrado con:
+- AWS CloudWatch (logs)
+- X-Ray (tracing)
+- Custom metrics con CloudWatch Metrics
+
+---
+
+## Contribución
+
+1. Crear fork del repositorio
+2. Crear feature branch (\`git checkout -b feature/awesome-feature\`)
+3. Commit cambios (\`git commit -m 'Add awesome feature'\`)
+4. Push al branch (\`git push origin feature/awesome-feature\`)
+5. Abrir Pull Request
+
+---
+
+## Licencia
+
+Distribuido bajo licencia MIT. Ver \`LICENSE\` para más detalles.
+
+---
+
+**Nota Técnica:** Para entornos de producción, se recomienda implementar:  
+✅ Autorizadores JWT via Cognito  
+✅ Encriptación de datos sensibles (KMS)  
+✅ Versioneo de API (\`/v1/appointments\`)  
+✅ Circuit Breaker para integraciones externas
