@@ -1,0 +1,3197 @@
+{
+  "C:\\Users\\Sho Lee\\Documents\\Indra\\Reto\\medical-appointment\\serverless.yml": {
+    "versionFramework": "4.14.2",
+    "servicePath": "C:\\Users\\Sho Lee\\Documents\\Indra\\Reto\\medical-appointment\\serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "org": "oxwar",
+      "service": "medical-scheduler",
+      "frameworkVersion": "4",
+      "custom": {
+        "eventBusName": "medical-scheduler-event-bus-dev"
+      },
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs18.x",
+        "stage": "dev",
+        "region": "us-east-1",
+        "environment": {
+          "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+          "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+          "SNS_TOPIC_ARN": {
+            "Ref": "AppointmentSNSTopic"
+          },
+          "SQS_PE": "medical-scheduler-sqs-pe-dev",
+          "SQS_CL": "medical-scheduler-sqs-cl-dev",
+          "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+          "EVENT_BUS": "medical-scheduler-event-bus-dev",
+          "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+          "RDS_PORT": "3306",
+          "RDS_USER": "admin",
+          "RDS_PASSWORD": "<REDACTED>",
+          "RDS_PE_DATABASE": "medical_db_pe",
+          "RDS_CL_DATABASE": "medical_db_cl"
+        },
+        "iamRoleStatements": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "rds-db:connect"
+            ],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "dynamodb:PutItem",
+              "dynamodb:GetItem",
+              "dynamodb:UpdateItem",
+              "dynamodb:DeleteItem",
+              "dynamodb:Scan",
+              "dynamodb:Query"
+            ],
+            "Resource": [
+              "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments",
+              "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments/index/InsuredIdIndex"
+            ]
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "sns:Publish"
+            ],
+            "Resource": "arn:aws:sns:us-east-1:799634405715:medical-scheduler-dev-appointment-topic"
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "sqs:SendMessage",
+              "sqs:ReceiveMessage",
+              "sqs:DeleteMessage",
+              "sqs:GetQueueAttributes"
+            ],
+            "Resource": [
+              {
+                "Fn::GetAtt": [
+                  "SQSPE",
+                  "Arn"
+                ]
+              },
+              {
+                "Fn::GetAtt": [
+                  "SQSCL",
+                  "Arn"
+                ]
+              },
+              {
+                "Fn::GetAtt": [
+                  "SQSResult",
+                  "Arn"
+                ]
+              }
+            ]
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "ec2:DescribeNetworkInterfaces",
+              "ec2:CreateNetworkInterface",
+              "ec2:DeleteNetworkInterface",
+              "ec2:DescribeInstances",
+              "ec2:AttachNetworkInterface"
+            ],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "events:PutEvents"
+            ],
+            "Resource": "arn:aws:events:us-east-1:799634405715:event-bus/medical-scheduler-event-bus-dev"
+          }
+        ],
+        "versionFunctions": true,
+        "compiledCloudFormationTemplate": {
+          "AWSTemplateFormatVersion": "2010-09-09",
+          "Description": "The AWS CloudFormation template for this Serverless application",
+          "Resources": {
+            "AppointmentLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment"
+              }
+            },
+            "AppointmentUnderscorepeLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment_pe"
+              }
+            },
+            "AppointmentUnderscoreclLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment_cl"
+              }
+            },
+            "IamRoleLambdaExecution": {
+              "Type": "AWS::IAM::Role",
+              "Properties": {
+                "AssumeRolePolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": [
+                          "lambda.amazonaws.com"
+                        ]
+                      },
+                      "Action": [
+                        "sts:AssumeRole"
+                      ]
+                    }
+                  ]
+                },
+                "Policies": [
+                  {
+                    "PolicyName": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          "medical-scheduler",
+                          "dev",
+                          "lambda"
+                        ]
+                      ]
+                    },
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogStream",
+                            "logs:CreateLogGroup",
+                            "logs:TagResource"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-scheduler-dev*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:PutLogEvents"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-scheduler-dev*:*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents"
+                          ],
+                          "Resource": "arn:aws:logs:*:*:*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "rds-db:connect"
+                          ],
+                          "Resource": "*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "dynamodb:PutItem",
+                            "dynamodb:GetItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Scan",
+                            "dynamodb:Query"
+                          ],
+                          "Resource": [
+                            "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments",
+                            "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments/index/InsuredIdIndex"
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "sns:Publish"
+                          ],
+                          "Resource": "arn:aws:sns:us-east-1:799634405715:medical-scheduler-dev-appointment-topic"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "sqs:SendMessage",
+                            "sqs:ReceiveMessage",
+                            "sqs:DeleteMessage",
+                            "sqs:GetQueueAttributes"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::GetAtt": [
+                                "SQSPE",
+                                "Arn"
+                              ]
+                            },
+                            {
+                              "Fn::GetAtt": [
+                                "SQSCL",
+                                "Arn"
+                              ]
+                            },
+                            {
+                              "Fn::GetAtt": [
+                                "SQSResult",
+                                "Arn"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DeleteNetworkInterface",
+                            "ec2:DescribeInstances",
+                            "ec2:AttachNetworkInterface"
+                          ],
+                          "Resource": "*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "events:PutEvents"
+                          ],
+                          "Resource": "arn:aws:events:us-east-1:799634405715:event-bus/medical-scheduler-event-bus-dev"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "sqs:ReceiveMessage",
+                            "sqs:DeleteMessage",
+                            "sqs:GetQueueAttributes"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::GetAtt": [
+                                "SQSResult",
+                                "Arn"
+                              ]
+                            },
+                            {
+                              "Fn::GetAtt": [
+                                "SQSPE",
+                                "Arn"
+                              ]
+                            },
+                            {
+                              "Fn::GetAtt": [
+                                "SQSCL",
+                                "Arn"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Path": "/",
+                "RoleName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "medical-scheduler",
+                      "dev",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "lambdaRole"
+                    ]
+                  ]
+                }
+              }
+            },
+            "AppointmentLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+                  "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+                },
+                "Handler": "src/infrastructure/handlers/appointment.handler",
+                "Runtime": "nodejs18.x",
+                "FunctionName": "medical-scheduler-dev-appointment",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                    "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                    "SNS_TOPIC_ARN": {
+                      "Ref": "AppointmentSNSTopic"
+                    },
+                    "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                    "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                    "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                    "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                    "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                    "RDS_PORT": "3306",
+                    "RDS_USER": "admin",
+                    "RDS_PASSWORD": "<REDACTED>",
+                    "RDS_PE_DATABASE": "medical_db_pe",
+                    "RDS_CL_DATABASE": "medical_db_cl",
+                    "NODE_OPTIONS": "--enable-source-maps"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "AppointmentLogGroup"
+              ]
+            },
+            "AppointmentUnderscorepeLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+                  "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+                },
+                "Handler": "src/infrastructure/handlers/pe-processor.handler",
+                "Runtime": "nodejs18.x",
+                "FunctionName": "medical-scheduler-dev-appointment_pe",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                    "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                    "SNS_TOPIC_ARN": {
+                      "Ref": "AppointmentSNSTopic"
+                    },
+                    "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                    "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                    "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                    "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                    "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                    "RDS_PORT": "3306",
+                    "RDS_USER": "admin",
+                    "RDS_PASSWORD": "<REDACTED>",
+                    "RDS_PE_DATABASE": "medical_db_pe",
+                    "RDS_CL_DATABASE": "medical_db_cl",
+                    "COUNTRY_ISO": "PE",
+                    "NODE_OPTIONS": "--enable-source-maps"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "AppointmentUnderscorepeLogGroup"
+              ]
+            },
+            "AppointmentUnderscoreclLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+                  "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+                },
+                "Handler": "src/infrastructure/handlers/cl-processor.handler",
+                "Runtime": "nodejs18.x",
+                "FunctionName": "medical-scheduler-dev-appointment_cl",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                    "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                    "SNS_TOPIC_ARN": {
+                      "Ref": "AppointmentSNSTopic"
+                    },
+                    "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                    "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                    "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                    "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                    "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                    "RDS_PORT": "3306",
+                    "RDS_USER": "admin",
+                    "RDS_PASSWORD": "<REDACTED>",
+                    "RDS_PE_DATABASE": "medical_db_pe",
+                    "RDS_CL_DATABASE": "medical_db_cl",
+                    "COUNTRY_ISO": "CL",
+                    "NODE_OPTIONS": "--enable-source-maps"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "AppointmentUnderscoreclLogGroup"
+              ]
+            },
+            "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "AppointmentLambdaFunction"
+                },
+                "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+              }
+            },
+            "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "AppointmentUnderscorepeLambdaFunction"
+                },
+                "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+              }
+            },
+            "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "AppointmentUnderscoreclLambdaFunction"
+                },
+                "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+              }
+            },
+            "AppointmentEventSourceMappingSQSSQSResult": {
+              "Type": "AWS::Lambda::EventSourceMapping",
+              "DependsOn": [
+                "IamRoleLambdaExecution"
+              ],
+              "Properties": {
+                "BatchSize": 10,
+                "EventSourceArn": {
+                  "Fn::GetAtt": [
+                    "SQSResult",
+                    "Arn"
+                  ]
+                },
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "AppointmentLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Enabled": true
+              }
+            },
+            "AppointmentUnderscorepeEventSourceMappingSQSSQSPE": {
+              "Type": "AWS::Lambda::EventSourceMapping",
+              "DependsOn": [
+                "IamRoleLambdaExecution"
+              ],
+              "Properties": {
+                "BatchSize": 10,
+                "EventSourceArn": {
+                  "Fn::GetAtt": [
+                    "SQSPE",
+                    "Arn"
+                  ]
+                },
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "AppointmentUnderscorepeLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Enabled": true
+              }
+            },
+            "AppointmentUnderscoreclEventSourceMappingSQSSQSCL": {
+              "Type": "AWS::Lambda::EventSourceMapping",
+              "DependsOn": [
+                "IamRoleLambdaExecution"
+              ],
+              "Properties": {
+                "BatchSize": 10,
+                "EventSourceArn": {
+                  "Fn::GetAtt": [
+                    "SQSCL",
+                    "Arn"
+                  ]
+                },
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "AppointmentUnderscoreclLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Enabled": true
+              }
+            },
+            "HttpApi": {
+              "Type": "AWS::ApiGatewayV2::Api",
+              "Properties": {
+                "Name": "dev-medical-scheduler",
+                "ProtocolType": "HTTP"
+              }
+            },
+            "HttpApiStage": {
+              "Type": "AWS::ApiGatewayV2::Stage",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "StageName": "$default",
+                "AutoDeploy": true,
+                "DefaultRouteSettings": {
+                  "DetailedMetricsEnabled": false
+                }
+              }
+            },
+            "AppointmentLambdaPermissionHttpApi": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "AppointmentLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "HttpApi"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "HttpApiIntegrationAppointment": {
+              "Type": "AWS::ApiGatewayV2::Integration",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "IntegrationType": "AWS_PROXY",
+                "IntegrationUri": {
+                  "Fn::GetAtt": [
+                    "AppointmentLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "PayloadFormatVersion": "2.0",
+                "TimeoutInMillis": 30000
+              }
+            },
+            "HttpApiRoutePostAppointments": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST /appointments",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationAppointment"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationAppointment"
+            },
+            "HttpApiRouteGetAppointments": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "GET /appointments",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationAppointment"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationAppointment"
+            },
+            "AppointmentsTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "medical-scheduler-dev-appointments",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "id",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "insuredId",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "id",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "GlobalSecondaryIndexes": [
+                  {
+                    "IndexName": "InsuredIdIndex",
+                    "KeySchema": [
+                      {
+                        "AttributeName": "insuredId",
+                        "KeyType": "HASH"
+                      }
+                    ],
+                    "Projection": {
+                      "ProjectionType": "ALL"
+                    }
+                  }
+                ],
+                "BillingMode": "PAY_PER_REQUEST"
+              }
+            },
+            "AppointmentEventBus": {
+              "Type": "AWS::Events::EventBus",
+              "Properties": {
+                "Name": "medical-scheduler-event-bus-dev"
+              }
+            },
+            "EventBridgeRuleToStatusQueue": {
+              "Type": "AWS::Events::Rule",
+              "Properties": {
+                "EventBusName": {
+                  "Ref": "AppointmentEventBus"
+                },
+                "EventPattern": {
+                  "source": [
+                    "appointments"
+                  ]
+                },
+                "Targets": [
+                  {
+                    "Arn": {
+                      "Fn::GetAtt": [
+                        "SQSResult",
+                        "Arn"
+                      ]
+                    },
+                    "Id": "SendToResultQueue"
+                  }
+                ]
+              }
+            },
+            "SQSResult": {
+              "Type": "AWS::SQS::Queue",
+              "Properties": {
+                "QueueName": "medical-scheduler-sqs-result-dev",
+                "VisibilityTimeout": 300
+              }
+            },
+            "SQSResultQueuePolicy": {
+              "Type": "AWS::SQS::QueuePolicy",
+              "Properties": {
+                "Queues": [
+                  {
+                    "Ref": "SQSResult"
+                  }
+                ],
+                "PolicyDocument": {
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "events.amazonaws.com"
+                      },
+                      "Action": "sqs:SendMessage",
+                      "Resource": {
+                        "Fn::GetAtt": [
+                          "SQSResult",
+                          "Arn"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "SQSPE": {
+              "Type": "AWS::SQS::Queue",
+              "Properties": {
+                "QueueName": "medical-scheduler-sqs-pe-dev",
+                "VisibilityTimeout": 300
+              }
+            },
+            "SQSPEQueuePolicy": {
+              "Type": "AWS::SQS::QueuePolicy",
+              "Properties": {
+                "Queues": [
+                  {
+                    "Ref": "SQSPE"
+                  }
+                ],
+                "PolicyDocument": {
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "sns.amazonaws.com"
+                      },
+                      "Action": "sqs:SendMessage",
+                      "Resource": {
+                        "Fn::GetAtt": [
+                          "SQSPE",
+                          "Arn"
+                        ]
+                      },
+                      "Condition": {
+                        "ArnEquals": {
+                          "aws:SourceArn": {
+                            "Ref": "AppointmentSNSTopic"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "SQSCL": {
+              "Type": "AWS::SQS::Queue",
+              "Properties": {
+                "QueueName": "medical-scheduler-sqs-cl-dev",
+                "VisibilityTimeout": 300
+              }
+            },
+            "SQSCLQueuePolicy": {
+              "Type": "AWS::SQS::QueuePolicy",
+              "Properties": {
+                "Queues": [
+                  {
+                    "Ref": "SQSCL"
+                  }
+                ],
+                "PolicyDocument": {
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "sns.amazonaws.com"
+                      },
+                      "Action": "sqs:SendMessage",
+                      "Resource": {
+                        "Fn::GetAtt": [
+                          "SQSCL",
+                          "Arn"
+                        ]
+                      },
+                      "Condition": {
+                        "ArnEquals": {
+                          "aws:SourceArn": {
+                            "Ref": "AppointmentSNSTopic"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "AppointmentSNSTopic": {
+              "Type": "AWS::SNS::Topic",
+              "Properties": {
+                "TopicName": "medical-scheduler-dev-appointment-topic"
+              }
+            },
+            "SNSPESubscription": {
+              "Type": "AWS::SNS::Subscription",
+              "Properties": {
+                "TopicArn": {
+                  "Ref": "AppointmentSNSTopic"
+                },
+                "Protocol": "sqs",
+                "Endpoint": {
+                  "Fn::GetAtt": [
+                    "SQSPE",
+                    "Arn"
+                  ]
+                },
+                "FilterPolicy": {
+                  "countryISO": [
+                    "PE"
+                  ]
+                }
+              }
+            },
+            "SNSCLSubscription": {
+              "Type": "AWS::SNS::Subscription",
+              "Properties": {
+                "TopicArn": {
+                  "Ref": "AppointmentSNSTopic"
+                },
+                "Protocol": "sqs",
+                "Endpoint": {
+                  "Fn::GetAtt": [
+                    "SQSCL",
+                    "Arn"
+                  ]
+                },
+                "FilterPolicy": {
+                  "countryISO": [
+                    "CL"
+                  ]
+                }
+              }
+            }
+          },
+          "Outputs": {
+            "ServerlessDeploymentBucketName": {
+              "Value": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+              "Export": {
+                "Name": "sls-medical-scheduler-dev-ServerlessDeploymentBucketName"
+              }
+            },
+            "AppointmentLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY"
+              },
+              "Export": {
+                "Name": "sls-medical-scheduler-dev-AppointmentLambdaFunctionQualifiedArn"
+              }
+            },
+            "AppointmentUnderscorepeLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s"
+              },
+              "Export": {
+                "Name": "sls-medical-scheduler-dev-AppointmentUnderscorepeLambdaFunctionQualifiedArn"
+              }
+            },
+            "AppointmentUnderscoreclLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw"
+              },
+              "Export": {
+                "Name": "sls-medical-scheduler-dev-AppointmentUnderscoreclLambdaFunctionQualifiedArn"
+              }
+            },
+            "HttpApiId": {
+              "Description": "Id of the HTTP API",
+              "Value": {
+                "Ref": "HttpApi"
+              },
+              "Export": {
+                "Name": "sls-medical-scheduler-dev-HttpApiId"
+              }
+            },
+            "HttpApiUrl": {
+              "Description": "URL of the HTTP API",
+              "Value": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "https://",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    ".execute-api.",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ".",
+                    {
+                      "Ref": "AWS::URLSuffix"
+                    }
+                  ]
+                ]
+              },
+              "Export": {
+                "Name": "sls-medical-scheduler-dev-HttpApiUrl"
+              }
+            }
+          }
+        },
+        "vpc": {}
+      },
+      "functions": {
+        "appointment": {
+          "handler": "src/infrastructure/handlers/appointment.handler",
+          "events": [
+            {
+              "httpApi": {
+                "path": "/appointments",
+                "method": "post"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "/appointments"
+            },
+            {
+              "httpApi": {
+                "path": "/appointments",
+                "method": "get"
+              },
+              "resolvedMethod": "GET",
+              "resolvedPath": "/appointments"
+            },
+            {
+              "sqs": {
+                "arn": {
+                  "Fn::GetAtt": [
+                    "SQSResult",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "name": "medical-scheduler-dev-appointment",
+          "environment": {
+            "NODE_OPTIONS": "--enable-source-maps"
+          },
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "nodejs18.x",
+          "vpc": {},
+          "versionLogicalId": "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY"
+        },
+        "appointment_pe": {
+          "handler": "src/infrastructure/handlers/pe-processor.handler",
+          "environment": {
+            "COUNTRY_ISO": "PE",
+            "NODE_OPTIONS": "--enable-source-maps"
+          },
+          "events": [
+            {
+              "sqs": {
+                "arn": {
+                  "Fn::GetAtt": [
+                    "SQSPE",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "name": "medical-scheduler-dev-appointment_pe",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "nodejs18.x",
+          "vpc": {},
+          "versionLogicalId": "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s"
+        },
+        "appointment_cl": {
+          "handler": "src/infrastructure/handlers/cl-processor.handler",
+          "environment": {
+            "COUNTRY_ISO": "CL",
+            "NODE_OPTIONS": "--enable-source-maps"
+          },
+          "events": [
+            {
+              "sqs": {
+                "arn": {
+                  "Fn::GetAtt": [
+                    "SQSCL",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "name": "medical-scheduler-dev-appointment_cl",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "nodejs18.x",
+          "vpc": {},
+          "versionLogicalId": "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw"
+        }
+      },
+      "resources": {
+        "Resources": {
+          "AppointmentsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "medical-scheduler-dev-appointments",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "insuredId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "InsuredIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "insuredId",
+                      "KeyType": "HASH"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST"
+            }
+          },
+          "AppointmentEventBus": {
+            "Type": "AWS::Events::EventBus",
+            "Properties": {
+              "Name": "medical-scheduler-event-bus-dev"
+            }
+          },
+          "EventBridgeRuleToStatusQueue": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+              "EventBusName": {
+                "Ref": "AppointmentEventBus"
+              },
+              "EventPattern": {
+                "source": [
+                  "appointments"
+                ]
+              },
+              "Targets": [
+                {
+                  "Arn": {
+                    "Fn::GetAtt": [
+                      "SQSResult",
+                      "Arn"
+                    ]
+                  },
+                  "Id": "SendToResultQueue"
+                }
+              ]
+            }
+          },
+          "SQSResult": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+              "QueueName": "medical-scheduler-sqs-result-dev",
+              "VisibilityTimeout": 300
+            }
+          },
+          "SQSResultQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "SQSResult"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "events.amazonaws.com"
+                    },
+                    "Action": "sqs:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "SQSResult",
+                        "Arn"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "SQSPE": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+              "QueueName": "medical-scheduler-sqs-pe-dev",
+              "VisibilityTimeout": 300
+            }
+          },
+          "SQSPEQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "SQSPE"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "sns.amazonaws.com"
+                    },
+                    "Action": "sqs:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "SQSPE",
+                        "Arn"
+                      ]
+                    },
+                    "Condition": {
+                      "ArnEquals": {
+                        "aws:SourceArn": {
+                          "Ref": "AppointmentSNSTopic"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "SQSCL": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+              "QueueName": "medical-scheduler-sqs-cl-dev",
+              "VisibilityTimeout": 300
+            }
+          },
+          "SQSCLQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "SQSCL"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "sns.amazonaws.com"
+                    },
+                    "Action": "sqs:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "SQSCL",
+                        "Arn"
+                      ]
+                    },
+                    "Condition": {
+                      "ArnEquals": {
+                        "aws:SourceArn": {
+                          "Ref": "AppointmentSNSTopic"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "AppointmentSNSTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+              "TopicName": "medical-scheduler-dev-appointment-topic"
+            }
+          },
+          "SNSPESubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+              "TopicArn": {
+                "Ref": "AppointmentSNSTopic"
+              },
+              "Protocol": "sqs",
+              "Endpoint": {
+                "Fn::GetAtt": [
+                  "SQSPE",
+                  "Arn"
+                ]
+              },
+              "FilterPolicy": {
+                "countryISO": [
+                  "PE"
+                ]
+              }
+            }
+          },
+          "SNSCLSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+              "TopicArn": {
+                "Ref": "AppointmentSNSTopic"
+              },
+              "Protocol": "sqs",
+              "Endpoint": {
+                "Fn::GetAtt": [
+                  "SQSCL",
+                  "Arn"
+                ]
+              },
+              "FilterPolicy": {
+                "countryISO": [
+                  "CL"
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {}
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs18.x",
+      "stage": "dev",
+      "region": "us-east-1",
+      "environment": {
+        "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+        "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+        "SNS_TOPIC_ARN": {
+          "Ref": "AppointmentSNSTopic"
+        },
+        "SQS_PE": "medical-scheduler-sqs-pe-dev",
+        "SQS_CL": "medical-scheduler-sqs-cl-dev",
+        "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+        "EVENT_BUS": "medical-scheduler-event-bus-dev",
+        "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+        "RDS_PORT": "3306",
+        "RDS_USER": "admin",
+        "RDS_PASSWORD": "<REDACTED>",
+        "RDS_PE_DATABASE": "medical_db_pe",
+        "RDS_CL_DATABASE": "medical_db_cl"
+      },
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ],
+          "Resource": "arn:aws:logs:*:*:*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "rds-db:connect"
+          ],
+          "Resource": "*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "dynamodb:PutItem",
+            "dynamodb:GetItem",
+            "dynamodb:UpdateItem",
+            "dynamodb:DeleteItem",
+            "dynamodb:Scan",
+            "dynamodb:Query"
+          ],
+          "Resource": [
+            "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments",
+            "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments/index/InsuredIdIndex"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "sns:Publish"
+          ],
+          "Resource": "arn:aws:sns:us-east-1:799634405715:medical-scheduler-dev-appointment-topic"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "sqs:SendMessage",
+            "sqs:ReceiveMessage",
+            "sqs:DeleteMessage",
+            "sqs:GetQueueAttributes"
+          ],
+          "Resource": [
+            {
+              "Fn::GetAtt": [
+                "SQSPE",
+                "Arn"
+              ]
+            },
+            {
+              "Fn::GetAtt": [
+                "SQSCL",
+                "Arn"
+              ]
+            },
+            {
+              "Fn::GetAtt": [
+                "SQSResult",
+                "Arn"
+              ]
+            }
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:CreateNetworkInterface",
+            "ec2:DeleteNetworkInterface",
+            "ec2:DescribeInstances",
+            "ec2:AttachNetworkInterface"
+          ],
+          "Resource": "*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "events:PutEvents"
+          ],
+          "Resource": "arn:aws:events:us-east-1:799634405715:event-bus/medical-scheduler-event-bus-dev"
+        }
+      ],
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "AppointmentLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment"
+            }
+          },
+          "AppointmentUnderscorepeLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment_pe"
+            }
+          },
+          "AppointmentUnderscoreclLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment_cl"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "medical-scheduler",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-scheduler-dev*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-scheduler-dev*:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogGroup",
+                          "logs:CreateLogStream",
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": "arn:aws:logs:*:*:*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "rds-db:connect"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:PutItem",
+                          "dynamodb:GetItem",
+                          "dynamodb:UpdateItem",
+                          "dynamodb:DeleteItem",
+                          "dynamodb:Scan",
+                          "dynamodb:Query"
+                        ],
+                        "Resource": [
+                          "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments",
+                          "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments/index/InsuredIdIndex"
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "sns:Publish"
+                        ],
+                        "Resource": "arn:aws:sns:us-east-1:799634405715:medical-scheduler-dev-appointment-topic"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "sqs:SendMessage",
+                          "sqs:ReceiveMessage",
+                          "sqs:DeleteMessage",
+                          "sqs:GetQueueAttributes"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::GetAtt": [
+                              "SQSPE",
+                              "Arn"
+                            ]
+                          },
+                          {
+                            "Fn::GetAtt": [
+                              "SQSCL",
+                              "Arn"
+                            ]
+                          },
+                          {
+                            "Fn::GetAtt": [
+                              "SQSResult",
+                              "Arn"
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "ec2:DescribeNetworkInterfaces",
+                          "ec2:CreateNetworkInterface",
+                          "ec2:DeleteNetworkInterface",
+                          "ec2:DescribeInstances",
+                          "ec2:AttachNetworkInterface"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "events:PutEvents"
+                        ],
+                        "Resource": "arn:aws:events:us-east-1:799634405715:event-bus/medical-scheduler-event-bus-dev"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "sqs:ReceiveMessage",
+                          "sqs:DeleteMessage",
+                          "sqs:GetQueueAttributes"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::GetAtt": [
+                              "SQSResult",
+                              "Arn"
+                            ]
+                          },
+                          {
+                            "Fn::GetAtt": [
+                              "SQSPE",
+                              "Arn"
+                            ]
+                          },
+                          {
+                            "Fn::GetAtt": [
+                              "SQSCL",
+                              "Arn"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "medical-scheduler",
+                    "dev",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "AppointmentLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+                "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+              },
+              "Handler": "src/infrastructure/handlers/appointment.handler",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "medical-scheduler-dev-appointment",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                  "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                  "SNS_TOPIC_ARN": {
+                    "Ref": "AppointmentSNSTopic"
+                  },
+                  "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                  "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                  "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                  "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                  "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                  "RDS_PORT": "3306",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "<REDACTED>",
+                  "RDS_PE_DATABASE": "medical_db_pe",
+                  "RDS_CL_DATABASE": "medical_db_cl",
+                  "NODE_OPTIONS": "--enable-source-maps"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "AppointmentLogGroup"
+            ]
+          },
+          "AppointmentUnderscorepeLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+                "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+              },
+              "Handler": "src/infrastructure/handlers/pe-processor.handler",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "medical-scheduler-dev-appointment_pe",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                  "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                  "SNS_TOPIC_ARN": {
+                    "Ref": "AppointmentSNSTopic"
+                  },
+                  "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                  "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                  "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                  "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                  "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                  "RDS_PORT": "3306",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "<REDACTED>",
+                  "RDS_PE_DATABASE": "medical_db_pe",
+                  "RDS_CL_DATABASE": "medical_db_cl",
+                  "COUNTRY_ISO": "PE",
+                  "NODE_OPTIONS": "--enable-source-maps"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "AppointmentUnderscorepeLogGroup"
+            ]
+          },
+          "AppointmentUnderscoreclLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+                "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+              },
+              "Handler": "src/infrastructure/handlers/cl-processor.handler",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "medical-scheduler-dev-appointment_cl",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                  "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                  "SNS_TOPIC_ARN": {
+                    "Ref": "AppointmentSNSTopic"
+                  },
+                  "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                  "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                  "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                  "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                  "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                  "RDS_PORT": "3306",
+                  "RDS_USER": "admin",
+                  "RDS_PASSWORD": "<REDACTED>",
+                  "RDS_PE_DATABASE": "medical_db_pe",
+                  "RDS_CL_DATABASE": "medical_db_cl",
+                  "COUNTRY_ISO": "CL",
+                  "NODE_OPTIONS": "--enable-source-maps"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "AppointmentUnderscoreclLogGroup"
+            ]
+          },
+          "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "AppointmentLambdaFunction"
+              },
+              "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+            }
+          },
+          "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "AppointmentUnderscorepeLambdaFunction"
+              },
+              "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+            }
+          },
+          "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "AppointmentUnderscoreclLambdaFunction"
+              },
+              "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+            }
+          },
+          "AppointmentEventSourceMappingSQSSQSResult": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "DependsOn": [
+              "IamRoleLambdaExecution"
+            ],
+            "Properties": {
+              "BatchSize": 10,
+              "EventSourceArn": {
+                "Fn::GetAtt": [
+                  "SQSResult",
+                  "Arn"
+                ]
+              },
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "AppointmentLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Enabled": true
+            }
+          },
+          "AppointmentUnderscorepeEventSourceMappingSQSSQSPE": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "DependsOn": [
+              "IamRoleLambdaExecution"
+            ],
+            "Properties": {
+              "BatchSize": 10,
+              "EventSourceArn": {
+                "Fn::GetAtt": [
+                  "SQSPE",
+                  "Arn"
+                ]
+              },
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "AppointmentUnderscorepeLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Enabled": true
+            }
+          },
+          "AppointmentUnderscoreclEventSourceMappingSQSSQSCL": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "DependsOn": [
+              "IamRoleLambdaExecution"
+            ],
+            "Properties": {
+              "BatchSize": 10,
+              "EventSourceArn": {
+                "Fn::GetAtt": [
+                  "SQSCL",
+                  "Arn"
+                ]
+              },
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "AppointmentUnderscoreclLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Enabled": true
+            }
+          },
+          "HttpApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "dev-medical-scheduler",
+              "ProtocolType": "HTTP"
+            }
+          },
+          "HttpApiStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "StageName": "$default",
+              "AutoDeploy": true,
+              "DefaultRouteSettings": {
+                "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "AppointmentLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "AppointmentLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationAppointment": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "Fn::GetAtt": [
+                  "AppointmentLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRoutePostAppointments": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST /appointments",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationAppointment"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationAppointment"
+          },
+          "HttpApiRouteGetAppointments": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /appointments",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationAppointment"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationAppointment"
+          },
+          "AppointmentsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "medical-scheduler-dev-appointments",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "insuredId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "InsuredIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "insuredId",
+                      "KeyType": "HASH"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST"
+            }
+          },
+          "AppointmentEventBus": {
+            "Type": "AWS::Events::EventBus",
+            "Properties": {
+              "Name": "medical-scheduler-event-bus-dev"
+            }
+          },
+          "EventBridgeRuleToStatusQueue": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+              "EventBusName": {
+                "Ref": "AppointmentEventBus"
+              },
+              "EventPattern": {
+                "source": [
+                  "appointments"
+                ]
+              },
+              "Targets": [
+                {
+                  "Arn": {
+                    "Fn::GetAtt": [
+                      "SQSResult",
+                      "Arn"
+                    ]
+                  },
+                  "Id": "SendToResultQueue"
+                }
+              ]
+            }
+          },
+          "SQSResult": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+              "QueueName": "medical-scheduler-sqs-result-dev",
+              "VisibilityTimeout": 300
+            }
+          },
+          "SQSResultQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "SQSResult"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "events.amazonaws.com"
+                    },
+                    "Action": "sqs:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "SQSResult",
+                        "Arn"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "SQSPE": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+              "QueueName": "medical-scheduler-sqs-pe-dev",
+              "VisibilityTimeout": 300
+            }
+          },
+          "SQSPEQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "SQSPE"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "sns.amazonaws.com"
+                    },
+                    "Action": "sqs:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "SQSPE",
+                        "Arn"
+                      ]
+                    },
+                    "Condition": {
+                      "ArnEquals": {
+                        "aws:SourceArn": {
+                          "Ref": "AppointmentSNSTopic"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "SQSCL": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+              "QueueName": "medical-scheduler-sqs-cl-dev",
+              "VisibilityTimeout": 300
+            }
+          },
+          "SQSCLQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+              "Queues": [
+                {
+                  "Ref": "SQSCL"
+                }
+              ],
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "sns.amazonaws.com"
+                    },
+                    "Action": "sqs:SendMessage",
+                    "Resource": {
+                      "Fn::GetAtt": [
+                        "SQSCL",
+                        "Arn"
+                      ]
+                    },
+                    "Condition": {
+                      "ArnEquals": {
+                        "aws:SourceArn": {
+                          "Ref": "AppointmentSNSTopic"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "AppointmentSNSTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+              "TopicName": "medical-scheduler-dev-appointment-topic"
+            }
+          },
+          "SNSPESubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+              "TopicArn": {
+                "Ref": "AppointmentSNSTopic"
+              },
+              "Protocol": "sqs",
+              "Endpoint": {
+                "Fn::GetAtt": [
+                  "SQSPE",
+                  "Arn"
+                ]
+              },
+              "FilterPolicy": {
+                "countryISO": [
+                  "PE"
+                ]
+              }
+            }
+          },
+          "SNSCLSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+              "TopicArn": {
+                "Ref": "AppointmentSNSTopic"
+              },
+              "Protocol": "sqs",
+              "Endpoint": {
+                "Fn::GetAtt": [
+                  "SQSCL",
+                  "Arn"
+                ]
+              },
+              "FilterPolicy": {
+                "countryISO": [
+                  "CL"
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+            "Export": {
+              "Name": "sls-medical-scheduler-dev-ServerlessDeploymentBucketName"
+            }
+          },
+          "AppointmentLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY"
+            },
+            "Export": {
+              "Name": "sls-medical-scheduler-dev-AppointmentLambdaFunctionQualifiedArn"
+            }
+          },
+          "AppointmentUnderscorepeLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s"
+            },
+            "Export": {
+              "Name": "sls-medical-scheduler-dev-AppointmentUnderscorepeLambdaFunctionQualifiedArn"
+            }
+          },
+          "AppointmentUnderscoreclLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw"
+            },
+            "Export": {
+              "Name": "sls-medical-scheduler-dev-AppointmentUnderscoreclLambdaFunctionQualifiedArn"
+            }
+          },
+          "HttpApiId": {
+            "Description": "Id of the HTTP API",
+            "Value": {
+              "Ref": "HttpApi"
+            },
+            "Export": {
+              "Name": "sls-medical-scheduler-dev-HttpApiId"
+            }
+          },
+          "HttpApiUrl": {
+            "Description": "URL of the HTTP API",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  }
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-medical-scheduler-dev-HttpApiUrl"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "serviceRawFile": "org: oxwar\r\nservice: medical-scheduler\r\nframeworkVersion: '4'\r\n\r\ncustom:\r\n  eventBusName: ${self:service}-event-bus-${opt:stage, self:provider.stage}\r\n\r\nprovider:\r\n  name: aws\r\n  runtime: nodejs18.x\r\n  stage: dev\r\n  region: us-east-1\r\n  environment:\r\n    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}-appointments\r\n    SNS_TOPIC: ${self:service}-${opt:stage, self:provider.stage}-appointment-topic\r\n    SNS_TOPIC_ARN: !Ref AppointmentSNSTopic\r\n    SQS_PE: ${self:service}-sqs-pe-${opt:stage, self:provider.stage}\r\n    SQS_CL: ${self:service}-sqs-cl-${opt:stage, self:provider.stage}\r\n    SQS_RESULT: ${self:service}-sqs-result-${opt:stage, self:provider.stage}\r\n    \r\n    EVENT_BUS: ${self:custom.eventBusName}\r\n\r\n    RDS_HOST: ${ssm:/medical-appointment-db/rds/host}\r\n    RDS_PORT: ${ssm:/medical-appointment-db/rds/port}\r\n    RDS_USER: ${ssm:/medical-appointment-db/rds/user}\r\n    RDS_PASSWORD: ${ssm:/medical-appointment-db/rds/password}\r\n    RDS_PE_DATABASE: ${ssm:/medical-appointment-db/rds/pe/database}\r\n    RDS_CL_DATABASE: ${ssm:/medical-appointment-db/rds/cl/database}\r\n\r\n  iamRoleStatements:\r\n    - Effect: Allow\r\n      Action:\r\n        - logs:CreateLogGroup\r\n        - logs:CreateLogStream\r\n        - logs:PutLogEvents\r\n      Resource: arn:aws:logs:*:*:*\r\n    - Effect: Allow\r\n      Action:\r\n        - rds-db:connect\r\n      Resource: \"*\"\r\n    - Effect: Allow\r\n      Action:\r\n        - dynamodb:PutItem\r\n        - dynamodb:GetItem\r\n        - dynamodb:UpdateItem\r\n        - dynamodb:DeleteItem\r\n        - dynamodb:Scan\r\n        - dynamodb:Query\r\n      Resource:\r\n        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE}\r\n        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE}/index/InsuredIdIndex\r\n    - Effect: Allow\r\n      Action:\r\n        - sns:Publish\r\n      Resource:\r\n        - arn:aws:sns:${aws:region}:${aws:accountId}:${self:provider.environment.SNS_TOPIC}\r\n    - Effect: Allow\r\n      Action:\r\n        - sqs:SendMessage\r\n        - sqs:ReceiveMessage\r\n        - sqs:DeleteMessage\r\n        - sqs:GetQueueAttributes\r\n      Resource:\r\n        - !GetAtt SQSPE.Arn\r\n        - !GetAtt SQSCL.Arn\r\n        - !GetAtt SQSResult.Arn\r\n    - Effect: Allow\r\n      Action:\r\n        - \"ec2:DescribeNetworkInterfaces\"\r\n        - \"ec2:CreateNetworkInterface\"\r\n        - \"ec2:DeleteNetworkInterface\"\r\n        - \"ec2:DescribeInstances\"\r\n        - \"ec2:AttachNetworkInterface\"\r\n      Resource: \"*\"\r\n    - Effect: Allow\r\n      Action:\r\n        - events:PutEvents\r\n      Resource:\r\n        - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/${self:custom.eventBusName}\r\n\r\nfunctions:\r\n  appointment:\r\n    handler: src/infrastructure/handlers/appointment.handler\r\n    events:\r\n      - httpApi:\r\n          path: /appointments\r\n          method: post\r\n      - httpApi:\r\n          path: /appointments\r\n          method: get\r\n      - sqs:\r\n          arn: !GetAtt SQSResult.Arn\r\n\r\n\r\n  appointment_pe:\r\n    handler: src/infrastructure/handlers/pe-processor.handler\r\n    environment:\r\n      COUNTRY_ISO: 'PE'\r\n    events:\r\n      - sqs:\r\n          arn: !GetAtt SQSPE.Arn\r\n\r\n  appointment_cl:\r\n    handler: src/infrastructure/handlers/cl-processor.handler\r\n    environment:\r\n      COUNTRY_ISO: 'CL'\r\n    events:\r\n      - sqs:\r\n          arn: !GetAtt SQSCL.Arn\r\n\r\nresources:\r\n  Resources:\r\n    AppointmentsTable:\r\n      Type: AWS::DynamoDB::Table\r\n      Properties:\r\n        TableName: ${self:provider.environment.DYNAMODB_TABLE}\r\n        AttributeDefinitions:\r\n          - AttributeName: id\r\n            AttributeType: S\r\n          - AttributeName: insuredId\r\n            AttributeType: S\r\n        KeySchema:\r\n          - AttributeName: id\r\n            KeyType: HASH\r\n        GlobalSecondaryIndexes:\r\n          - IndexName: InsuredIdIndex\r\n            KeySchema:\r\n              - AttributeName: insuredId\r\n                KeyType: HASH\r\n            Projection:\r\n              ProjectionType: ALL\r\n        BillingMode: PAY_PER_REQUEST\r\n    \r\n    AppointmentEventBus:\r\n      Type: AWS::Events::EventBus\r\n      Properties:\r\n        Name: ${self:custom.eventBusName}\r\n\r\n    EventBridgeRuleToStatusQueue:\r\n      Type: AWS::Events::Rule\r\n      Properties:\r\n        EventBusName: !Ref AppointmentEventBus\r\n        EventPattern:\r\n          source:\r\n            - \"appointments\"\r\n          # detail-type:\r\n          #   - \"AppointmentProcessed\"\r\n        Targets:\r\n          - Arn: !GetAtt SQSResult.Arn\r\n            Id: SendToResultQueue\r\n\r\n    SQSResult:\r\n      Type: AWS::SQS::Queue\r\n      Properties:\r\n        QueueName: ${self:provider.environment.SQS_RESULT}\r\n        VisibilityTimeout: 300\r\n\r\n    SQSResultQueuePolicy:\r\n      Type: AWS::SQS::QueuePolicy\r\n      Properties:\r\n        Queues:\r\n          - !Ref SQSResult\r\n        PolicyDocument:\r\n          Statement:\r\n            - Effect: Allow\r\n              Principal:\r\n                Service: events.amazonaws.com\r\n              Action: sqs:SendMessage\r\n              Resource: !GetAtt SQSResult.Arn\r\n\r\n    SQSPE:\r\n      Type: AWS::SQS::Queue\r\n      Properties:\r\n        QueueName: ${self:provider.environment.SQS_PE}\r\n        VisibilityTimeout: 300\r\n\r\n    SQSPEQueuePolicy:\r\n      Type: AWS::SQS::QueuePolicy\r\n      Properties:\r\n        Queues:\r\n          - !Ref SQSPE\r\n        PolicyDocument:\r\n          Statement:\r\n            - Effect: Allow\r\n              Principal:\r\n                Service: sns.amazonaws.com\r\n              Action: sqs:SendMessage\r\n              Resource: !GetAtt SQSPE.Arn\r\n              Condition:\r\n                ArnEquals:\r\n                  aws:SourceArn: !Ref AppointmentSNSTopic\r\n\r\n    SQSCL:\r\n      Type: AWS::SQS::Queue\r\n      Properties:\r\n        QueueName: ${self:provider.environment.SQS_CL}\r\n        VisibilityTimeout: 300\r\n\r\n    SQSCLQueuePolicy:\r\n      Type: AWS::SQS::QueuePolicy\r\n      Properties:\r\n        Queues:\r\n          - !Ref SQSCL\r\n        PolicyDocument:\r\n          Statement:\r\n            - Effect: Allow\r\n              Principal:\r\n                Service: sns.amazonaws.com\r\n              Action: sqs:SendMessage\r\n              Resource: !GetAtt SQSCL.Arn\r\n              Condition:\r\n                ArnEquals:\r\n                  aws:SourceArn: !Ref AppointmentSNSTopic\r\n\r\n    AppointmentSNSTopic:\r\n      Type: AWS::SNS::Topic\r\n      Properties:\r\n        TopicName: ${self:provider.environment.SNS_TOPIC}\r\n\r\n    SNSPESubscription:\r\n      Type: AWS::SNS::Subscription\r\n      Properties:\r\n        TopicArn: !Ref AppointmentSNSTopic\r\n        Protocol: sqs\r\n        Endpoint: !GetAtt SQSPE.Arn\r\n        FilterPolicy:\r\n          countryISO: [\"PE\"]\r\n\r\n    SNSCLSubscription:\r\n      Type: AWS::SNS::Subscription\r\n      Properties:\r\n        TopicArn: !Ref AppointmentSNSTopic\r\n        Protocol: sqs\r\n        Endpoint: !GetAtt SQSCL.Arn\r\n        FilterPolicy:\r\n          countryISO: [\"CL\"]",
+    "command": [
+      "deploy"
+    ],
+    "options": {},
+    "orgId": "f613efb7-d72b-4563-a1e8-6d62994ee217",
+    "orgName": "oxwar",
+    "userId": "sVlTPxG5ymSBkWlMVJ",
+    "userName": "oxwar",
+    "serviceProviderAwsAccountId": "799634405715",
+    "serviceProviderAwsCfStackName": "medical-scheduler-dev",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:799634405715:stack/medical-scheduler-dev/4e72bfc0-272d-11f0-86b4-1257c60a24e5",
+    "serviceProviderAwsCfStackCreated": "2025-05-02T08:13:19.290Z",
+    "serviceProviderAwsCfStackUpdated": "2025-05-03T01:13:54.118Z",
+    "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
+    "serviceProviderAwsCfStackOutputs": [
+      {
+        "OutputKey": "AppointmentLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:799634405715:function:medical-scheduler-dev-appointment:23",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-medical-scheduler-dev-AppointmentLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "AppointmentUnderscoreclLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:799634405715:function:medical-scheduler-dev-appointment_cl:16",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-medical-scheduler-dev-AppointmentUnderscoreclLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "AppointmentUnderscorepeLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:799634405715:function:medical-scheduler-dev-appointment_pe:16",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-medical-scheduler-dev-AppointmentUnderscorepeLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "HttpApiId",
+        "OutputValue": "xbwuay4759",
+        "Description": "Id of the HTTP API",
+        "ExportName": "sls-medical-scheduler-dev-HttpApiId"
+      },
+      {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+        "ExportName": "sls-medical-scheduler-dev-ServerlessDeploymentBucketName"
+      },
+      {
+        "OutputKey": "HttpApiUrl",
+        "OutputValue": "https://xbwuay4759.execute-api.us-east-1.amazonaws.com",
+        "Description": "URL of the HTTP API",
+        "ExportName": "sls-medical-scheduler-dev-HttpApiUrl"
+      }
+    ],
+    "compiledCloudFormationTemplate": {
+      "AWSTemplateFormatVersion": "2010-09-09",
+      "Description": "The AWS CloudFormation template for this Serverless application",
+      "Resources": {
+        "AppointmentLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment"
+          }
+        },
+        "AppointmentUnderscorepeLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment_pe"
+          }
+        },
+        "AppointmentUnderscoreclLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/medical-scheduler-dev-appointment_cl"
+          }
+        },
+        "IamRoleLambdaExecution": {
+          "Type": "AWS::IAM::Role",
+          "Properties": {
+            "AssumeRolePolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": [
+                      "lambda.amazonaws.com"
+                    ]
+                  },
+                  "Action": [
+                    "sts:AssumeRole"
+                  ]
+                }
+              ]
+            },
+            "Policies": [
+              {
+                "PolicyName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "medical-scheduler",
+                      "dev",
+                      "lambda"
+                    ]
+                  ]
+                },
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:CreateLogStream",
+                        "logs:CreateLogGroup",
+                        "logs:TagResource"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-scheduler-dev*:*"
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:PutLogEvents"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-scheduler-dev*:*:*"
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                      ],
+                      "Resource": "arn:aws:logs:*:*:*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "rds-db:connect"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "dynamodb:PutItem",
+                        "dynamodb:GetItem",
+                        "dynamodb:UpdateItem",
+                        "dynamodb:DeleteItem",
+                        "dynamodb:Scan",
+                        "dynamodb:Query"
+                      ],
+                      "Resource": [
+                        "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments",
+                        "arn:aws:dynamodb:us-east-1:799634405715:table/medical-scheduler-dev-appointments/index/InsuredIdIndex"
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "sns:Publish"
+                      ],
+                      "Resource": "arn:aws:sns:us-east-1:799634405715:medical-scheduler-dev-appointment-topic"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "sqs:SendMessage",
+                        "sqs:ReceiveMessage",
+                        "sqs:DeleteMessage",
+                        "sqs:GetQueueAttributes"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::GetAtt": [
+                            "SQSPE",
+                            "Arn"
+                          ]
+                        },
+                        {
+                          "Fn::GetAtt": [
+                            "SQSCL",
+                            "Arn"
+                          ]
+                        },
+                        {
+                          "Fn::GetAtt": [
+                            "SQSResult",
+                            "Arn"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "ec2:DescribeNetworkInterfaces",
+                        "ec2:CreateNetworkInterface",
+                        "ec2:DeleteNetworkInterface",
+                        "ec2:DescribeInstances",
+                        "ec2:AttachNetworkInterface"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "events:PutEvents"
+                      ],
+                      "Resource": "arn:aws:events:us-east-1:799634405715:event-bus/medical-scheduler-event-bus-dev"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "sqs:ReceiveMessage",
+                        "sqs:DeleteMessage",
+                        "sqs:GetQueueAttributes"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::GetAtt": [
+                            "SQSResult",
+                            "Arn"
+                          ]
+                        },
+                        {
+                          "Fn::GetAtt": [
+                            "SQSPE",
+                            "Arn"
+                          ]
+                        },
+                        {
+                          "Fn::GetAtt": [
+                            "SQSCL",
+                            "Arn"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "Path": "/",
+            "RoleName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "medical-scheduler",
+                  "dev",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  "lambdaRole"
+                ]
+              ]
+            }
+          }
+        },
+        "AppointmentLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+              "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+            },
+            "Handler": "src/infrastructure/handlers/appointment.handler",
+            "Runtime": "nodejs18.x",
+            "FunctionName": "medical-scheduler-dev-appointment",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Environment": {
+              "Variables": {
+                "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                "SNS_TOPIC_ARN": {
+                  "Ref": "AppointmentSNSTopic"
+                },
+                "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                "RDS_PORT": "3306",
+                "RDS_USER": "admin",
+                "RDS_PASSWORD": "<REDACTED>",
+                "RDS_PE_DATABASE": "medical_db_pe",
+                "RDS_CL_DATABASE": "medical_db_cl",
+                "NODE_OPTIONS": "--enable-source-maps"
+              }
+            },
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "AppointmentLogGroup"
+          ]
+        },
+        "AppointmentUnderscorepeLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+              "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+            },
+            "Handler": "src/infrastructure/handlers/pe-processor.handler",
+            "Runtime": "nodejs18.x",
+            "FunctionName": "medical-scheduler-dev-appointment_pe",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Environment": {
+              "Variables": {
+                "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                "SNS_TOPIC_ARN": {
+                  "Ref": "AppointmentSNSTopic"
+                },
+                "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                "RDS_PORT": "3306",
+                "RDS_USER": "admin",
+                "RDS_PASSWORD": "<REDACTED>",
+                "RDS_PE_DATABASE": "medical_db_pe",
+                "RDS_CL_DATABASE": "medical_db_cl",
+                "COUNTRY_ISO": "PE",
+                "NODE_OPTIONS": "--enable-source-maps"
+              }
+            },
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "AppointmentUnderscorepeLogGroup"
+          ]
+        },
+        "AppointmentUnderscoreclLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+              "S3Key": "serverless/medical-scheduler/dev/1746234987532-2025-05-03T01:16:27.532Z/medical-scheduler.zip"
+            },
+            "Handler": "src/infrastructure/handlers/cl-processor.handler",
+            "Runtime": "nodejs18.x",
+            "FunctionName": "medical-scheduler-dev-appointment_cl",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Environment": {
+              "Variables": {
+                "DYNAMODB_TABLE": "medical-scheduler-dev-appointments",
+                "SNS_TOPIC": "medical-scheduler-dev-appointment-topic",
+                "SNS_TOPIC_ARN": {
+                  "Ref": "AppointmentSNSTopic"
+                },
+                "SQS_PE": "medical-scheduler-sqs-pe-dev",
+                "SQS_CL": "medical-scheduler-sqs-cl-dev",
+                "SQS_RESULT": "medical-scheduler-sqs-result-dev",
+                "EVENT_BUS": "medical-scheduler-event-bus-dev",
+                "RDS_HOST": "medical-db.c4dsgmm6wb7z.us-east-1.rds.amazonaws.com",
+                "RDS_PORT": "3306",
+                "RDS_USER": "admin",
+                "RDS_PASSWORD": "<REDACTED>",
+                "RDS_PE_DATABASE": "medical_db_pe",
+                "RDS_CL_DATABASE": "medical_db_cl",
+                "COUNTRY_ISO": "CL",
+                "NODE_OPTIONS": "--enable-source-maps"
+              }
+            },
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "AppointmentUnderscoreclLogGroup"
+          ]
+        },
+        "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "AppointmentLambdaFunction"
+            },
+            "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+          }
+        },
+        "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "AppointmentUnderscorepeLambdaFunction"
+            },
+            "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+          }
+        },
+        "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "AppointmentUnderscoreclLambdaFunction"
+            },
+            "CodeSha256": "BQC3wZ38yMFdIdhoPyZOEyPWt6UxqoDvvtGrCTLtw+I="
+          }
+        },
+        "AppointmentEventSourceMappingSQSSQSResult": {
+          "Type": "AWS::Lambda::EventSourceMapping",
+          "DependsOn": [
+            "IamRoleLambdaExecution"
+          ],
+          "Properties": {
+            "BatchSize": 10,
+            "EventSourceArn": {
+              "Fn::GetAtt": [
+                "SQSResult",
+                "Arn"
+              ]
+            },
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "AppointmentLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Enabled": true
+          }
+        },
+        "AppointmentUnderscorepeEventSourceMappingSQSSQSPE": {
+          "Type": "AWS::Lambda::EventSourceMapping",
+          "DependsOn": [
+            "IamRoleLambdaExecution"
+          ],
+          "Properties": {
+            "BatchSize": 10,
+            "EventSourceArn": {
+              "Fn::GetAtt": [
+                "SQSPE",
+                "Arn"
+              ]
+            },
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "AppointmentUnderscorepeLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Enabled": true
+          }
+        },
+        "AppointmentUnderscoreclEventSourceMappingSQSSQSCL": {
+          "Type": "AWS::Lambda::EventSourceMapping",
+          "DependsOn": [
+            "IamRoleLambdaExecution"
+          ],
+          "Properties": {
+            "BatchSize": 10,
+            "EventSourceArn": {
+              "Fn::GetAtt": [
+                "SQSCL",
+                "Arn"
+              ]
+            },
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "AppointmentUnderscoreclLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Enabled": true
+          }
+        },
+        "HttpApi": {
+          "Type": "AWS::ApiGatewayV2::Api",
+          "Properties": {
+            "Name": "dev-medical-scheduler",
+            "ProtocolType": "HTTP"
+          }
+        },
+        "HttpApiStage": {
+          "Type": "AWS::ApiGatewayV2::Stage",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "StageName": "$default",
+            "AutoDeploy": true,
+            "DefaultRouteSettings": {
+              "DetailedMetricsEnabled": false
+            }
+          }
+        },
+        "AppointmentLambdaPermissionHttpApi": {
+          "Type": "AWS::Lambda::Permission",
+          "Properties": {
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "AppointmentLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Action": "lambda:InvokeFunction",
+            "Principal": "apigateway.amazonaws.com",
+            "SourceArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":execute-api:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  "/*"
+                ]
+              ]
+            }
+          }
+        },
+        "HttpApiIntegrationAppointment": {
+          "Type": "AWS::ApiGatewayV2::Integration",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "IntegrationType": "AWS_PROXY",
+            "IntegrationUri": {
+              "Fn::GetAtt": [
+                "AppointmentLambdaFunction",
+                "Arn"
+              ]
+            },
+            "PayloadFormatVersion": "2.0",
+            "TimeoutInMillis": 30000
+          }
+        },
+        "HttpApiRoutePostAppointments": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "RouteKey": "POST /appointments",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "HttpApiIntegrationAppointment"
+                  }
+                ]
+              ]
+            }
+          },
+          "DependsOn": "HttpApiIntegrationAppointment"
+        },
+        "HttpApiRouteGetAppointments": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "RouteKey": "GET /appointments",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "HttpApiIntegrationAppointment"
+                  }
+                ]
+              ]
+            }
+          },
+          "DependsOn": "HttpApiIntegrationAppointment"
+        },
+        "AppointmentsTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "medical-scheduler-dev-appointments",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "id",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "insuredId",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "id",
+                "KeyType": "HASH"
+              }
+            ],
+            "GlobalSecondaryIndexes": [
+              {
+                "IndexName": "InsuredIdIndex",
+                "KeySchema": [
+                  {
+                    "AttributeName": "insuredId",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "Projection": {
+                  "ProjectionType": "ALL"
+                }
+              }
+            ],
+            "BillingMode": "PAY_PER_REQUEST"
+          }
+        },
+        "AppointmentEventBus": {
+          "Type": "AWS::Events::EventBus",
+          "Properties": {
+            "Name": "medical-scheduler-event-bus-dev"
+          }
+        },
+        "EventBridgeRuleToStatusQueue": {
+          "Type": "AWS::Events::Rule",
+          "Properties": {
+            "EventBusName": {
+              "Ref": "AppointmentEventBus"
+            },
+            "EventPattern": {
+              "source": [
+                "appointments"
+              ]
+            },
+            "Targets": [
+              {
+                "Arn": {
+                  "Fn::GetAtt": [
+                    "SQSResult",
+                    "Arn"
+                  ]
+                },
+                "Id": "SendToResultQueue"
+              }
+            ]
+          }
+        },
+        "SQSResult": {
+          "Type": "AWS::SQS::Queue",
+          "Properties": {
+            "QueueName": "medical-scheduler-sqs-result-dev",
+            "VisibilityTimeout": 300
+          }
+        },
+        "SQSResultQueuePolicy": {
+          "Type": "AWS::SQS::QueuePolicy",
+          "Properties": {
+            "Queues": [
+              {
+                "Ref": "SQSResult"
+              }
+            ],
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "events.amazonaws.com"
+                  },
+                  "Action": "sqs:SendMessage",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SQSResult",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "SQSPE": {
+          "Type": "AWS::SQS::Queue",
+          "Properties": {
+            "QueueName": "medical-scheduler-sqs-pe-dev",
+            "VisibilityTimeout": 300
+          }
+        },
+        "SQSPEQueuePolicy": {
+          "Type": "AWS::SQS::QueuePolicy",
+          "Properties": {
+            "Queues": [
+              {
+                "Ref": "SQSPE"
+              }
+            ],
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "sns.amazonaws.com"
+                  },
+                  "Action": "sqs:SendMessage",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SQSPE",
+                      "Arn"
+                    ]
+                  },
+                  "Condition": {
+                    "ArnEquals": {
+                      "aws:SourceArn": {
+                        "Ref": "AppointmentSNSTopic"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "SQSCL": {
+          "Type": "AWS::SQS::Queue",
+          "Properties": {
+            "QueueName": "medical-scheduler-sqs-cl-dev",
+            "VisibilityTimeout": 300
+          }
+        },
+        "SQSCLQueuePolicy": {
+          "Type": "AWS::SQS::QueuePolicy",
+          "Properties": {
+            "Queues": [
+              {
+                "Ref": "SQSCL"
+              }
+            ],
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "sns.amazonaws.com"
+                  },
+                  "Action": "sqs:SendMessage",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SQSCL",
+                      "Arn"
+                    ]
+                  },
+                  "Condition": {
+                    "ArnEquals": {
+                      "aws:SourceArn": {
+                        "Ref": "AppointmentSNSTopic"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "AppointmentSNSTopic": {
+          "Type": "AWS::SNS::Topic",
+          "Properties": {
+            "TopicName": "medical-scheduler-dev-appointment-topic"
+          }
+        },
+        "SNSPESubscription": {
+          "Type": "AWS::SNS::Subscription",
+          "Properties": {
+            "TopicArn": {
+              "Ref": "AppointmentSNSTopic"
+            },
+            "Protocol": "sqs",
+            "Endpoint": {
+              "Fn::GetAtt": [
+                "SQSPE",
+                "Arn"
+              ]
+            },
+            "FilterPolicy": {
+              "countryISO": [
+                "PE"
+              ]
+            }
+          }
+        },
+        "SNSCLSubscription": {
+          "Type": "AWS::SNS::Subscription",
+          "Properties": {
+            "TopicArn": {
+              "Ref": "AppointmentSNSTopic"
+            },
+            "Protocol": "sqs",
+            "Endpoint": {
+              "Fn::GetAtt": [
+                "SQSCL",
+                "Arn"
+              ]
+            },
+            "FilterPolicy": {
+              "countryISO": [
+                "CL"
+              ]
+            }
+          }
+        }
+      },
+      "Outputs": {
+        "ServerlessDeploymentBucketName": {
+          "Value": "serverless-framework-deployments-us-east-1-8f3187eb-5df0",
+          "Export": {
+            "Name": "sls-medical-scheduler-dev-ServerlessDeploymentBucketName"
+          }
+        },
+        "AppointmentLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "AppointmentLambdaVersion60rgfGXEKiD4MEtoFw1SqrvtnjCC4YHmvq1lMtY"
+          },
+          "Export": {
+            "Name": "sls-medical-scheduler-dev-AppointmentLambdaFunctionQualifiedArn"
+          }
+        },
+        "AppointmentUnderscorepeLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "AppointmentUnderscorepeLambdaVersionRbxleM8qimSAw6m7piIEx70NYUZGECECmxJGYgde1s"
+          },
+          "Export": {
+            "Name": "sls-medical-scheduler-dev-AppointmentUnderscorepeLambdaFunctionQualifiedArn"
+          }
+        },
+        "AppointmentUnderscoreclLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "AppointmentUnderscoreclLambdaVersionusqrPhZjaR6JpQ93V50If91Nvhnbf2nblXvj7FUfw"
+          },
+          "Export": {
+            "Name": "sls-medical-scheduler-dev-AppointmentUnderscoreclLambdaFunctionQualifiedArn"
+          }
+        },
+        "HttpApiId": {
+          "Description": "Id of the HTTP API",
+          "Value": {
+            "Ref": "HttpApi"
+          },
+          "Export": {
+            "Name": "sls-medical-scheduler-dev-HttpApiId"
+          }
+        },
+        "HttpApiUrl": {
+          "Description": "URL of the HTTP API",
+          "Value": {
+            "Fn::Join": [
+              "",
+              [
+                "https://",
+                {
+                  "Ref": "HttpApi"
+                },
+                ".execute-api.",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ".",
+                {
+                  "Ref": "AWS::URLSuffix"
+                }
+              ]
+            ]
+          },
+          "Export": {
+            "Name": "sls-medical-scheduler-dev-HttpApiUrl"
+          }
+        }
+      }
+    }
+  }
+}
